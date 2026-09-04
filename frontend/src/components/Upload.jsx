@@ -1,51 +1,44 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-function Upload({ setUploadId }) {
+export default function Upload({ setUploadId }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [fileName, setFileName] = useState(null);
+  const [file, setFile] = useState(null);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
   const onDrop = useCallback(async (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-
+    const f = acceptedFiles[0];
+    if (!f) return;
     setUploading(true);
     setError(null);
-    setFileName(file.name);
+    setFile(f);
     setProgress(10);
-
     const formData = new FormData();
-    formData.append('file', file);
-
+    formData.append('file', f);
     try {
       setProgress(30);
-      const response = await axios.post('/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (p) => setProgress(Math.round((p.loaded / p.total) * 100)),
-      });
-      
-      const id = response.data.upload_id;
-      setUploadId(id);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Upload failed');
+      setUploadId(data.upload_id);
       setProgress(100);
-
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 600);
-      
+      setTimeout(() => navigate('/dashboard'), 600);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Upload failed. Please check the file format.');
+      setError(err.message);
       setUploading(false);
     }
   }, [setUploadId, navigate]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'text/csv': ['.csv'], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+    accept: {
+      'text/csv': ['.csv'],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+      'application/vnd.ms-excel': ['.xls'],  // <-- Added .xls support
+    },
     maxFiles: 1,
     disabled: uploading,
   });
@@ -53,10 +46,12 @@ function Upload({ setUploadId }) {
   return (
     <div className="max-w-4xl mx-auto animate-fade-in-up">
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-slate-800 tracking-tight">
+        <h1 className="text-4xl font-bold text-slate-800">
           Upload <span className="text-gradient">Financial Data</span>
         </h1>
-        <p className="text-slate-500 mt-2 text-lg">Drop your General Ledger or Transaction CSV here. AI analyzes it instantly.</p>
+        <p className="text-slate-500 mt-2 text-lg">
+          Drop your CSV, XLSX, or XLS file here. AI analyzes it instantly.
+        </p>
       </div>
 
       <div
@@ -66,7 +61,10 @@ function Upload({ setUploadId }) {
           ${uploading ? 'opacity-80 pointer-events-none' : ''}
           glass`}
       >
-        <input {...getInputProps()} />
+        <input 
+          {...getInputProps()} 
+          accept=".csv,.xlsx,.xls"  // <-- Added .xls here too
+        />
         
         {uploading ? (
           <div className="space-y-6 py-4">
@@ -74,7 +72,7 @@ function Upload({ setUploadId }) {
               <span className="text-3xl">⏳</span>
             </div>
             <div>
-              <p className="text-lg font-semibold text-slate-700">Analyzing {fileName}</p>
+              <p className="text-lg font-semibold text-slate-700">Analyzing {file?.name}</p>
               <div className="w-full max-w-md mx-auto bg-slate-200 rounded-full h-3 mt-4 overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-500 ease-out"
@@ -92,17 +90,18 @@ function Upload({ setUploadId }) {
             <p className="text-xl font-medium text-slate-700">
               {isDragActive ? 'Drop it right here!' : 'Drag & drop your CSV/Excel file'}
             </p>
-            <p className="text-sm text-slate-400">or click to browse files</p>
+            <p className="text-sm text-slate-400">or click to browse</p>
             <div className="flex flex-wrap justify-center gap-3 text-xs font-mono text-slate-400">
               <span className="px-3 py-1 bg-white rounded-full border border-slate-200">.CSV</span>
               <span className="px-3 py-1 bg-white rounded-full border border-slate-200">.XLSX</span>
+              <span className="px-3 py-1 bg-white rounded-full border border-slate-200">.XLS</span>  {/* <-- Added .xls badge */}
             </div>
           </div>
         )}
       </div>
 
       {error && (
-        <div className="mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start space-x-3 animate-fade-in-up">
+        <div className="mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 flex items-start space-x-3">
           <span className="text-xl">⚠️</span>
           <div>
             <p className="font-semibold">Upload Error</p>
@@ -115,21 +114,19 @@ function Upload({ setUploadId }) {
         <div className="glass p-6 rounded-xl card-hover">
           <span className="text-3xl block mb-2">🧠</span>
           <p className="font-semibold text-slate-700">Hybrid AI</p>
-          <p className="text-sm text-slate-500">Rules + XGBoost detection</p>
+          <p className="text-sm text-slate-500">Rules + XGBoost</p>
         </div>
         <div className="glass p-6 rounded-xl card-hover">
           <span className="text-3xl block mb-2">🎯</span>
           <p className="font-semibold text-slate-700">6 Anomaly Types</p>
-          <p className="text-sm text-slate-500">Duplicates, GST, Backdate & more</p>
+          <p className="text-sm text-slate-500">Duplicates, GST, Backdate</p>
         </div>
         <div className="glass p-6 rounded-xl card-hover">
           <span className="text-3xl block mb-2">📄</span>
           <p className="font-semibold text-slate-700">Audit Reports</p>
-          <p className="text-sm text-slate-500">One-click professional export</p>
+          <p className="text-sm text-slate-500">One‑click export</p>
         </div>
       </div>
     </div>
   );
 }
-
-export default Upload;

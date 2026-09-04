@@ -3,68 +3,112 @@ import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import Upload from './components/Upload';
 import Dashboard from './components/Dashboard';
 import TransactionDetails from './components/TransactionDetails';
+import TransactionsPage from './components/TransactionsPage';
+import ReportsPage from './components/ReportsPage';
+import SettingsPage from './components/SettingsPage';
+import AiInsightsPage from './components/AiInsightsPage';
 
-function App() {
-  const [uploadId, setUploadId] = useState(null);
+// --- SIDEBAR ---
+function Sidebar({ uploadId }) {
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(false);
+
+  const navItems = [
+    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
+    { path: '/', label: 'Upload', icon: '📤' },
+    { path: '/transactions', label: 'Transactions', icon: '📋' },
+    { path: '/ai-insights', label: 'AI Insights', icon: '🧠' },
+    { path: '/reports', label: 'Reports', icon: '📄' },
+    { path: '/settings', label: 'Settings', icon: '⚙️' },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* --- GLASS NAVIGATION --- */}
-      <nav className="glass sticky top-0 z-50 border-b border-white/20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg animate-float">
-                <span className="text-white text-sm font-bold">AI</span>
-              </div>
-              <h1 className="text-xl font-bold text-slate-800 tracking-tight">
-                Audit<span className="text-gradient">Copilot</span>
-              </h1>
-              <span className="hidden sm:inline-block text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200">
-                v2.0
-              </span>
+    <aside className={`glass-dark text-slate-300 h-screen sticky top-0 transition-all duration-300 flex flex-col border-r border-white/5 ${collapsed ? 'w-16' : 'w-64'}`}>
+      <div className="flex items-center justify-between p-4 border-b border-white/5">
+        <div className="flex flex-col">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-emerald-400 rounded-xl flex items-center justify-center shadow-lg">
+              <span className="text-white text-sm font-bold">AI</span>
             </div>
-            
-            <div className="flex items-center space-x-6">
-              <div className="hidden md:flex items-center space-x-1 text-sm font-medium text-slate-500">
-                <span className={`px-3 py-1.5 rounded-lg transition-all ${location.pathname === '/' ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100'}`}>
-                  <Link to="/">📤 Upload</Link>
-                </span>
-                {uploadId && (
-                  <span className={`px-3 py-1.5 rounded-lg transition-all ${location.pathname === '/dashboard' ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-100'}`}>
-                    <Link to="/dashboard">📊 Dashboard</Link>
-                  </span>
-                )}
+            {!collapsed && (
+              <div>
+                <span className="text-lg font-bold text-white tracking-tight">AuditCopilot</span>
+                <p className="text-[10px] text-indigo-300 tracking-wider font-medium">AI AUDIT PLATFORM</p>
               </div>
-              {/* Live Status Dot */}
-              <div className="flex items-center space-x-2">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="text-xs text-slate-400 font-medium hidden sm:inline">System Online</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
+        <button onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white transition">
+          {collapsed ? '→' : '←'}
+        </button>
+      </div>
+
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-all ${
+                isActive ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'hover:bg-white/5 text-slate-400 hover:text-white'
+              } ${collapsed ? 'justify-center' : ''}`}
+            >
+              <span className="text-xl">{item.icon}</span>
+              {!collapsed && <span className="text-sm font-medium">{item.label}</span>}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* --- MAIN CONTENT --- */}
-      <main className="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Routes>
-          <Route path="/" element={<Upload setUploadId={setUploadId} />} />
-          <Route path="/dashboard" element={<Dashboard uploadId={uploadId} />} />
-          <Route path="/txn/:txnId" element={<TransactionDetails uploadId={uploadId} />} />
-        </Routes>
-      </main>
+      <div className="p-4 border-t border-white/5 text-[10px] text-slate-500">
+        {!collapsed && <span>v2.0 • AI Powered</span>}
+      </div>
+    </aside>
+  );
+}
 
-      {/* --- FOOTER --- */}
-      <footer className="border-t border-slate-200/60 py-4 text-center text-xs text-slate-400 glass">
-        <p>⚡ Built with ❤️ for Ignite 8.0 Hackathon • AI-powered Audit Co-pilot</p>
-      </footer>
+// --- HEADER ---
+function Header() {
+  return (
+    <header className="glass sticky top-0 z-40 border-b border-white/20 px-6 py-4 flex justify-between items-center">
+      <div className="flex items-center space-x-4">
+        <h2 className="text-xl font-semibold text-slate-800">Audit Dashboard</h2>
+        <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">Live</span>
+      </div>
+      <div className="flex items-center space-x-4">
+        <span className="text-slate-400">👤</span>
+        <span className="text-sm text-slate-600 font-medium">CA User</span>
+      </div>
+    </header>
+  );
+}
+
+// --- MAIN APP CONTENT ---
+function AppContent() {
+  const [uploadId, setUploadId] = useState(null);
+
+  return (
+    <div className="flex min-h-screen bg-slate-100">
+      <Sidebar uploadId={uploadId} />
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 p-6 max-w-7xl w-full mx-auto">
+          <Routes>
+            <Route path="/" element={<Upload setUploadId={setUploadId} />} />
+            <Route path="/dashboard" element={<Dashboard uploadId={uploadId} />} />
+            <Route path="/txn/:txnId" element={<TransactionDetails uploadId={uploadId} />} />
+            <Route path="/transactions" element={<TransactionsPage uploadId={uploadId} />} />
+            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ai-insights" element={<AiInsightsPage uploadId={uploadId} />} />
+          </Routes>
+        </main>
+      </div>
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return <AppContent />;
+}
